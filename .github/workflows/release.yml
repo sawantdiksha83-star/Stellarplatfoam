@@ -1,0 +1,127 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION="0.0.0-dev"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Build contracts
+        working-directory: contracts
+        run: cargo build --target wasm32-unknown-unknown --release
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          
+          # Copy contract WASMs
+          cp contracts/target/wasm32-unknown-unknown/release/payment.wasm release/
+          cp contracts/target/wasm32-unknown-unknown/release/escrow.wasm release/
+          
+          # Copy deployment script
+          cp scripts/deploy.sh release/
+          
+          # Create archive
+          tar -czf stellar-freelance-platform-v${{ steps.version.outputs.version }}.tar.gz release/
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            if [[ -n "$PREV_TAG" ]]; then
+              CHANGELOG=$(git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges)
+            else
+              CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
+            fi
+          else
+            CHANGELOG="Development build"
+          fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: Release v${{ steps.version.outputs.version }}
+          body: |
+            ## 🚀 Stellar Freelance Platform v${{ steps.version.outputs.version }}
+            
+            ### 📦 What's Included
+            - Payment Contract (WASM)
+            - Escrow Contract (WASM)
+            - Deployment Script
+            
+            ### 📝 Changes
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### 🔧 Installation
+            1. Download the release archive
+            2. Extract the files
+            3. Follow the deployment instructions in README.md
+            
+            ### 📚 Documentation
+            See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for full documentation.
+          files: |
+            stellar-freelance-platform-v${{ steps.version.outputs.version }}.tar.gz
+            contracts/target/wasm32-unknown-unknown/release/payment.wasm
+            contracts/target/wasm32-unknown-unknown/release/escrow.wasm
+          draft: false
+          prerelease: false
+
+      - name: Create release summary
+        run: |
+          echo "## 🎉 Release v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Payment Contract WASM" >> $GITHUB_STEP_SUMMARY
+          echo "- Escrow Contract WASM" >> $GITHUB_STEP_SUMMARY
+          echo "- Deployment Script" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📝 Changelog" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.changelog.outputs.changelog }}" >> $GITHUB_STEP_SUMMARY

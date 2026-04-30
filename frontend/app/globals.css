@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    color: #f1f5f9;
+    font-family: var(--font-inter), system-ui, sans-serif;
+  }
+
+  ::selection {
+    background: rgba(59, 130, 246, 0.3);
+    color: #fff;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0a0a; }
+  ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+}
+
+@layer utilities {
+  .glow-blue {
+    text-shadow: 0 0 40px rgba(59, 130, 246, 0.5);
+  }
+
+  .border-glow {
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    transition: border-color 0.3s ease;
+  }
+
+  .border-glow:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+  }
+
+  .card-glow:hover {
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.08), 0 0 0 1px rgba(59, 130, 246, 0.15);
+  }
+}
+
+/* Syne font via @font-face fallback — loaded via next/font in components */

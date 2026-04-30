@@ -1,0 +1,21 @@
+# Rust
+target/
+
+# Node / Next.js
+node_modules/
+.next/
+
+# Visual Studio
+.vs/
+bin/
+obj/
+
+# Env files
+.env
+.env.local
+
+# Logs
+*.log
+
+# User files
+*.user

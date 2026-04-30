@@ -1,0 +1,28 @@
+name: Workflow Status
+
+on:
+  workflow_run:
+    workflows: ["CI", "CD - Deploy", "Code Quality", "Performance Testing"]
+    types:
+      - completed
+
+jobs:
+  status-check:
+    name: Update Status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check workflow status
+        run: |
+          echo "## 📊 Workflow Status Update" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow:** ${{ github.event.workflow_run.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ github.event.workflow_run.conclusion }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.event.workflow_run.head_branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.event.workflow_run.head_sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run:** ${{ github.event.workflow_run.html_url }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on failure
+        if: github.event.workflow_run.conclusion == 'failure'
+        run: |
+          echo "⚠️ Workflow failed: ${{ github.event.workflow_run.name }}"
+          echo "Check the logs: ${{ github.event.workflow_run.html_url }}"

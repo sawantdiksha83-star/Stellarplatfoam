@@ -1,0 +1,114 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-npm-dependencies:
+    name: Update NPM Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Update dependencies
+        working-directory: frontend
+        run: |
+          npm update
+          npm audit fix --audit-level=moderate || true
+
+      - name: Run tests
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test
+        continue-on-error: true
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(deps): update npm dependencies'
+          title: '🔄 Update NPM Dependencies'
+          body: |
+            ## 📦 Dependency Updates
+            
+            This PR updates NPM dependencies to their latest versions.
+            
+            ### ✅ Automated Checks
+            - Dependencies updated
+            - Tests executed
+            
+            ### 📝 Review Checklist
+            - [ ] Review dependency changes
+            - [ ] Verify tests pass
+            - [ ] Check for breaking changes
+            
+            ---
+            *This PR was automatically created by the dependency update workflow*
+          branch: chore/update-npm-dependencies
+          delete-branch: true
+          labels: dependencies, automated
+
+  update-cargo-dependencies:
+    name: Update Cargo Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Update dependencies
+        working-directory: contracts
+        run: |
+          cargo update
+          cargo audit fix || true
+
+      - name: Run tests
+        working-directory: contracts
+        run: cargo test
+        continue-on-error: true
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(deps): update cargo dependencies'
+          title: '🔄 Update Cargo Dependencies'
+          body: |
+            ## 📦 Dependency Updates
+            
+            This PR updates Cargo dependencies to their latest versions.
+            
+            ### ✅ Automated Checks
+            - Dependencies updated
+            - Tests executed
+            
+            ### 📝 Review Checklist
+            - [ ] Review dependency changes
+            - [ ] Verify tests pass
+            - [ ] Check for breaking changes
+            
+            ---
+            *This PR was automatically created by the dependency update workflow*
+          branch: chore/update-cargo-dependencies
+          delete-branch: true
+          labels: dependencies, automated
